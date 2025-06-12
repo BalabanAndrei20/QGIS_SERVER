@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Vizualizare CSV pe Hartă cu Semnal</title>
+  <meta charset="utf-8" />
+  <style>
+    #map { height: 90vh; width: 100%; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    #upload { margin: 10px; }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+<body>
+  <div id="upload">
+    <input type="file" id="csvFile" accept=".csv" />
+  </div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <script>
+    var map = L.map('map').setView([44.43, 26.10], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    function getColor(rsrp) {
+      if (rsrp < -123) return 'gray';
+      if (rsrp <= -114) return 'red';
+      if (rsrp <= -104) return 'orange';
+      if (rsrp <= -92)  return '#e6e600';
+      if (rsrp <= -86)  return '#c4d91f';
+      return 'green';
+    }
+
+    document.getElementById('csvFile').addEventListener('change', function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          const data = results.data;
+          let count = 0;
+          data.forEach(row => {
+            const lat = parseFloat(row.LOCATION_END_LAT || row.LAT || row.latitude);
+            const lng = parseFloat(row.LOCATION_END_LNG || row.LNG || row.longitude);
+            const rsrp = parseFloat(row.RA_END_RSRP);
+
+            if (!isNaN(lat) && !isNaN(lng) && !isNaN(rsrp)) {
+              L.circleMarker([lat, lng], {
+                radius: 6,
+                color: getColor(rsrp),
+                fillOpacity: 0.8,
+                weight: 1
+              }).addTo(map);
+              count++;
+            }
+          });
+          alert('S-au afișat ' + count + ' puncte pe hartă.');
+        }
+      });
+    });
+  </script>
+
+<div id="legend" style="position: absolute; bottom: 20px; left: 20px; background: white; padding: 10px; border: 1px solid black; z-index: 1000;">
+  <h4 style="margin: 0; padding-bottom: 5px;">Legendă Semnal</h4>
+  <div><span style="display:inline-block; width: 20px; height: 12px; background: #b60000;"></span> Fără semnal</div>
+  <div><span style="display:inline-block; width: 20px; height: 12px; background: #e60000;"></span> Semnal la limită</div>
+  <div><span style="display:inline-block; width: 20px; height: 12px; background: #f9a21b;"></span> Semnal slab</div>
+  <div><span style="display:inline-block; width: 20px; height: 12px; background: #c5e317;"></span> Semnal bun</div>
+  <div><span style="display:inline-block; width: 20px; height: 12px; background: #88c101;"></span> Semnal foarte bun</div>
+</div>
+
+</body>
+</html>
